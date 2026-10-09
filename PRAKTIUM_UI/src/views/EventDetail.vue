@@ -1,16 +1,5 @@
 <template>
   <div class="event-detail-page">
-    <button @click="$router.push('/browse/events')" class="btn-back">&larr; Back to Events</button>
-    <div class="detail-header">
-      <span class="event-tag">Workshop & Training</span>
-      <h1>Vue.js Mastery Workshop {{ $route.params.id }}</h1>
-      <div class="meta-info">
-        <span class="meta-item">October 12, 2026</span>
-        <span class="meta-item">Tech Hub, Jakarta Pusat</span>
-        <span class="meta-item">Quota: 150 Attendees</span>
-      </div>
-    </div>
-
     <!-- ASYMMETRICAL LAYOUT -->
     <div class="detail-content grid-asymmetric">
       <!-- F-PATTERN: Breaking text with Headings & Bullet Points -->
@@ -53,38 +42,6 @@
 </template>
 
 <style scoped>
-.btn-back {
-  background: none;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-bottom: var(--space-6);
-  color: var(--text-muted);
-}
-
-.detail-header {
-  background: var(--bg-light);
-  border-radius: var(--space-4);
-  border: 1px solid var(--border-color);
-  padding: var(--space-12) var(--space-8);
-  margin-bottom: var(--space-8);
-}
-
-.event-tag {
-  display: inline-block;
-  background: rgba(102, 68, 255, 0.1);
-  color: var(--primary);
-  padding: var(--space-1) var(--space-4);
-  border-radius: 50px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: var(--space-4);
-}
-
-.detail-header h1 { font-size: 2.8rem; margin-bottom: var(--space-4); line-height: 1.2; }
-.meta-info { display: flex; gap: var(--space-6); }
-.meta-item { color: var(--text-muted); font-weight: 500; font-size: 1.05rem; }
-
 /* ASYMMETRICAL GRID */
 .grid-asymmetric {
   display: grid;

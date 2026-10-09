@@ -11,11 +11,6 @@ const events = [
 
 <template>
   <div class="event-list-page">
-    <div class="header-section">
-      <h2 class="section-title">Upcoming Events</h2>
-      <p class="section-desc">Discover workshops, seminars, tech meetups, and competitions near you.</p>
-    </div>
-
     <!-- LAYOUT SYSTEM: ADAPTIVE GRID -->
     <div class="event-grid">
       <!-- VISUAL HIERARCHY: GROUPING & COMMON REGIONS -->
@@ -41,14 +36,19 @@ const events = [
 </template>
 
 <style scoped>
-.header-section { margin-bottom: var(--space-8); }
-.section-title { font-size: 2.2rem; margin-bottom: var(--space-2); }
-.section-desc { color: var(--text-muted); font-size: 1.1rem; }
+/* Keep the catalogue to three columns on wide screens while allowing
+   auto-fill to reduce it naturally on tablets and phones. */
+.event-list-page {
+  width: 100%;
+  max-width: 1100px;
+  min-width: 0;
+  margin-inline: auto;
+}
 
 /* ADAPTIVE GRID */
 .event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: var(--space-6);
 }
 
@@ -74,6 +74,7 @@ const events = [
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2);
   margin-bottom: var(--space-4);
 }
 

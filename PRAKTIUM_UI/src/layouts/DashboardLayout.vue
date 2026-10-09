@@ -47,7 +47,7 @@ Tinggi dibatasi 100vh agar bagian rail tidak ikut terguyur ke atas saat pane di-
 
 /* RAIL STYLES */
 .dashboard-rail {
-  width: 260px;
+  flex: 0 0 260px;
   background-color: #1c1948; /* Kontras gelap membedakan area nav dan konten */
   color: white;
   display: flex;
@@ -89,6 +89,7 @@ Tinggi dibatasi 100vh agar bagian rail tidak ikut terguyur ke atas saat pane di-
 /* PANE STYLES */
 .dashboard-pane {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto; /* Scroll khusus untuk area ini saja */
@@ -107,5 +108,23 @@ Tinggi dibatasi 100vh agar bagian rail tidak ikut terguyur ke atas saat pane di-
 
 .pane-content {
   padding: var(--space-8);
+}
+
+@media (max-width: 700px) {
+  .dashboard-layout {
+    height: 100dvh;
+  }
+
+  .dashboard-rail {
+    flex-basis: 200px;
+  }
+
+  .pane-header {
+    padding-inline: var(--space-4);
+  }
+
+  .pane-content {
+    padding: var(--space-4);
+  }
 }
 </style>

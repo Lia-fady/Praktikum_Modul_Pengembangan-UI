@@ -19,17 +19,17 @@
       </div>
       <div class="features-grid">
         <div class="feature-card">
-          <div class="feature-icon"></div>
+          <div class="feature-icon" aria-hidden="true">🔎</div>
           <h3>Discover Easily</h3>
           <p>Find events tailored to your interests using our smart category and location filters.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon"></div>
+          <div class="feature-icon" aria-hidden="true">🎟️</div>
           <h3>Seamless Ticketing</h3>
           <p>Register with one click and get your digital QR ticket instantly on your device.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon"></div>
+          <div class="feature-icon" aria-hidden="true">📊</div>
           <h3>Host Like a Pro</h3>
           <p>Manage attendees, track revenue, and scan QR codes with our comprehensive dashboard.</p>
         </div>
@@ -137,8 +137,12 @@
 }
 
 .feature-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto var(--space-4);
+  font-size: 2rem;
 }
 
 .feature-card h3 {

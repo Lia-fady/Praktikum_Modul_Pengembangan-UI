@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import Navbar from '@/components/app/Navbar.vue';
-import Breadcrumb from '@/components/app/Breadcrumb.vue';
 </script>
 
 <template>
   <div class="app-layout">
     <Navbar />
     <main class="main-content">
-      <Breadcrumb />
       <router-view />
     </main>
   </div>
@@ -23,6 +21,8 @@ import Breadcrumb from '@/components/app/Breadcrumb.vue';
 .main-content {
   flex: 1;
   width: 100%;
-  padding: 2rem clamp(16px, 4vw, 64px);
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: 0.5rem clamp(16px, 3vw, 40px);
 }
 </style>

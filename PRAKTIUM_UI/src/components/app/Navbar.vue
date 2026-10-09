@@ -20,7 +20,8 @@ const menus = [
       { name: 'Category', path: '/browse/category' }
     ]
   },
-  { name: 'Contact', path: '/contact' }
+  { name: 'Contact', path: '/contact' },
+  { name: 'Organizer Dashboard', path: '/dashboard' }
 ]
 
 const handleScroll = () => {
@@ -197,7 +198,7 @@ onUnmounted(() => {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 0.85rem 2rem;
+  padding: 0.35rem 1rem;
 }
 
 .navbar.scrolled {
@@ -210,10 +211,10 @@ onUnmounted(() => {
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.45rem;
   text-decoration: none;
   color: var(--text-white, #fff);
-  padding-right: 2rem;
+  padding-right: 0.5rem;
   transition: transform 0.3s ease;
 }
 
@@ -230,7 +231,7 @@ onUnmounted(() => {
 }
 
 .logo-text {
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -238,7 +239,7 @@ onUnmounted(() => {
 .nav-menu {
   display: flex;
   align-items: center;
-  gap: 2.5rem;
+  gap: 0.8rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -251,19 +252,20 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 1rem 0; /* Memberi ruang hover */
+  padding: 0.35rem 0; /* Memberi ruang hover */
 }
 
 .nav-link {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
   text-decoration: none;
   color: var(--text-white, #fff);
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  padding: 0.5rem 1.25rem;
-  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
   transition: all 0.3s ease;
 }
 
@@ -377,7 +379,7 @@ Inspired by user reference image
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
 }
 
 .lang-selector {
@@ -410,8 +412,8 @@ Inspired by user reference image
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 10px;
@@ -427,11 +429,28 @@ Inspired by user reference image
 
 @media (max-width: 900px) {
   .nav-menu {
-    gap: 1rem;
+    gap: 0.15rem;
+  }
+
+  .navbar-container {
+    padding-inline: 1rem;
+  }
+
+  .logo {
+    padding-right: 0.5rem;
+  }
+
+  .nav-link {
+    padding-inline: 0.45rem;
+    font-size: 0.75rem;
+  }
+
+  .nav-right {
+    gap: 0.5rem;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .nav-menu {
     display: none;
   }

@@ -38,6 +38,19 @@ body {
 Menerapkan 12-kolom grid untuk tata letak yang konsisten */
 .grid-12 {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--space-6);
+}
+
+@media (max-width: 900px) {
+  .grid-12 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-12 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
 }
