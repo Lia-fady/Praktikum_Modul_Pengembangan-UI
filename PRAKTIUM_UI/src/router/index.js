@@ -52,6 +52,17 @@ const routes = [
         meta: { breadcrumb: 'Contact' }
       }
     ]
+  },
+  {
+    path: '/dashboard',
+    component: () => import('@/layouts/DashboardLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'dashboard',
+        component: () => import('@/views/Dashboard.vue')
+      }
+    ]
   }
 ]
 
