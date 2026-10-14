@@ -1,59 +1,107 @@
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+import AppButton from '@/components/ui/AppButton.vue'
+import AppCard from '@/components/ui/AppCard.vue'
+import { getEventById } from '@/data/events'
+
+const route = useRoute()
+const event = computed(() => getEventById(route.params.id))
+</script>
+
 <template>
-  <div class="event-detail-page">
-    <!-- ASYMMETRICAL LAYOUT -->
+  <div v-if="event" class="event-detail-page">
     <div class="detail-content grid-asymmetric">
-      <!-- F-PATTERN: Breaking text with Headings & Bullet Points -->
-      <div class="main-desc">
-        <h2>About This Event</h2>
-        <p>
-          Welcome to the biggest web interface development training event of the year!
-          Gatherly is collaborating with the local developer community to host a comprehensive workshop
-          designed specifically to bring together professionals, enthusiasts, and students.
-        </p>
-        <p>
-          In this session, we will discuss various current industry challenges, dissect the implementation
-          of Single Page Applications (SPA), and practice hands-on Layout System design prioritizing visual hierarchy.
-          You will gain practical insights that can be directly applied to your future projects or career.
-        </p>
+      <AppCard class="main-desc">
+        <div class="info-block">
+          <div class="top-meta">
+            <span class="event-date">{{ event.date }}</span>
+            <span class="event-category">{{ event.cat }}</span>
+          </div>
+          <h2>{{ event.title }}</h2>
+          <p class="location">{{ event.loc }}</p>
+          <p>{{ event.summary }}</p>
+          <p>{{ event.desc }}</p>
 
-        <h2>Event Agenda</h2>
-        <ul class="agenda-list">
-          <li><strong>09:00 AM</strong> Registration & QR Check-in Scanning</li>
-          <li><strong>10:00 AM</strong> Session 1: Vue Router & Navigation Fundamentals</li>
-          <li><strong>11:30 AM</strong> Coffee Break & Networking Session</li>
-          <li><strong>01:00 PM</strong> Session 2: Layout System & Grid Implementation</li>
-          <li><strong>03:00 PM</strong> Q&A & Closing Remarks</li>
-        </ul>
-      </div>
-
-      <!-- FOCAL POINT & STICKY PANE -->
-      <div class="sidebar">
-        <div class="ticket-card sticky-pane">
-          <h3>Attendee Registration</h3>
-          <p class="price">Free</p>
-          <p class="ticket-desc">Secure your seat now before the quota is full.</p>
-          <!-- STRONGEST FOCAL POINT -->
-          <button class="btn-register">Register Now</button>
-          <p class="spots">Only 12 seats left!</p>
+          <h2>Event Agenda</h2>
+          <ul class="agenda-list">
+            <li v-for="item in event.agenda" :key="item.time">
+              <strong>{{ item.time }}</strong> {{ item.label }}
+            </li>
+          </ul>
         </div>
+      </AppCard>
+
+      <div class="sidebar sticky-pane">
+        <AppCard class="ticket-card">
+          <h3>Attendee Registration</h3>
+          <p class="price">{{ event.price }}</p>
+          <p class="ticket-desc">Secure your seat now before the quota is full.</p>
+          <AppButton variant="primary" class="register-button">Register Now</AppButton>
+          <p class="spots">Only {{ event.seatsLeft }} seats left!</p>
+        </AppCard>
       </div>
     </div>
   </div>
+
+  <AppCard v-else class="empty-state">
+    <h3>Event not found</h3>
+    <p>The selected event could not be located. Please return to the event list and choose another option.</p>
+  </AppCard>
 </template>
 
 <style scoped>
-/* ASYMMETRICAL GRID */
 .grid-asymmetric {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: var(--space-12);
 }
 
-.main-desc h2 {
+.main-desc {
+  padding: var(--space-8);
+}
+
+.info-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.top-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   margin-bottom: var(--space-4);
+}
+
+.event-date {
+  background: rgba(102, 68, 255, 0.08);
+  color: var(--primary);
+  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.event-category {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.main-desc h2 {
+  margin: 0 0 var(--space-4);
   font-size: 1.8rem;
   border-left: 4px solid var(--primary);
   padding-left: var(--space-2);
+}
+
+.location {
+  margin: 0 0 var(--space-6);
+  font-weight: 600;
+  color: var(--primary);
 }
 
 .main-desc p {
@@ -63,7 +111,12 @@
   font-size: 1.05rem;
 }
 
-.agenda-list { list-style: none; padding: 0; margin: var(--space-8) 0; }
+.agenda-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-8) 0 0;
+}
+
 .agenda-list li {
   padding: var(--space-3) 0;
   border-bottom: 1px solid var(--border-color);
@@ -71,42 +124,61 @@
   font-size: 1.05rem;
 }
 
-/* FOCAL POINT CARD */
-.ticket-card {
-  background: white;
-  padding: var(--space-8);
-  border-radius: var(--space-4);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.06);
-  text-align: center;
-}
-
-/* STICKY BEHAVIOR */
 .sticky-pane {
   position: sticky;
   top: 100px;
 }
 
-.ticket-card h3 { font-size: 1.5rem; margin-bottom: var(--space-2); }
-.price { font-size: 2.8rem; font-weight: 700; color: var(--primary); margin-bottom: var(--space-2); }
-.ticket-desc { color: var(--text-muted); margin-bottom: var(--space-6); }
-
-.btn-register {
-  width: 100%;
-  padding: var(--space-4);
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
+.ticket-card {
+  padding: var(--space-8);
+  text-align: center;
 }
 
-.btn-register:hover { background: var(--primary-hover); }
-.spots { margin-top: var(--space-4); color: #e63946; font-weight: 600; font-size: 0.95rem; }
+.ticket-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-2);
+}
+
+.price {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: var(--space-2);
+}
+
+.ticket-desc {
+  color: var(--text-muted);
+  margin-bottom: var(--space-6);
+}
+
+.register-button {
+  width: 100%;
+}
+
+.spots {
+  margin-top: var(--space-4);
+  color: #e63946;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.empty-state {
+  padding: 2rem;
+}
+
+.empty-state h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+}
+
+.empty-state p {
+  color: var(--text-muted);
+  margin: 0;
+}
 
 @media (max-width: 900px) {
-  .grid-asymmetric { grid-template-columns: 1fr; }
+  .grid-asymmetric {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
