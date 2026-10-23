@@ -20,7 +20,7 @@ function onInput(event) {
       id="event-search"
       type="text"
       :value="modelValue"
-      placeholder="Search by title, location, or keyword"
+      placeholder="Search events by title or location..."
       @input="onInput"
     />
   </div>

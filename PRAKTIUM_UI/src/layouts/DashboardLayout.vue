@@ -12,10 +12,12 @@ import { RouterView, RouterLink } from 'vue-router';
         <router-link to="/">Gatherly Organizer</router-link>
       </div>
       <nav class="rail-nav">
-        <router-link to="/dashboard" class="rail-link active">Overview</router-link>
-        <a href="#" class="rail-link">My Events</a>
-        <a href="#" class="rail-link">Attendees</a>
-        <a href="#" class="rail-link">QR Check-in</a>
+        <router-link to="/dashboard" class="rail-link" exact-active-class="active">
+          Dashboard
+        </router-link>
+        <router-link to="/dashboard/events" class="rail-link" active-class="active">
+          Event Management
+        </router-link>
       </nav>
       <div class="rail-footer">
         <router-link to="/" class="rail-link">&larr; Back to Public</router-link>
@@ -78,7 +80,8 @@ Tinggi dibatasi 100vh agar bagian rail tidak ikut terguyur ke atas saat pane di-
   transition: background 0.2s, color 0.2s;
 }
 
-.rail-link:hover, .rail-link.active {
+.rail-link:hover,
+.rail-link.active {
   background-color: rgba(255,255,255,0.05);
   color: white;
   border-left: 4px solid var(--primary);

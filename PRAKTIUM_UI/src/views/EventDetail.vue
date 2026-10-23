@@ -4,9 +4,11 @@ import { useRoute } from 'vue-router'
 
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
-import { getEventById } from '@/data/events'
+import { useEvents } from '@/composables/useEvents'
+import { formatEventDate } from '@/utils/formatEventDate'
 
 const route = useRoute()
+const { getEventById } = useEvents()
 const event = computed(() => getEventById(route.params.id))
 </script>
 
@@ -16,16 +18,19 @@ const event = computed(() => getEventById(route.params.id))
       <AppCard class="main-desc">
         <div class="info-block">
           <div class="top-meta">
-            <span class="event-date">{{ event.date }}</span>
+            <span class="event-date">{{ formatEventDate(event.date) }}</span>
             <span class="event-category">{{ event.cat }}</span>
           </div>
           <h2>{{ event.title }}</h2>
           <p class="location">{{ event.loc }}</p>
-          <p>{{ event.summary }}</p>
           <p>{{ event.desc }}</p>
 
-          <h2>Event Agenda</h2>
-          <ul class="agenda-list">
+          <template v-if="event.summary && event.summary !== event.desc">
+            <h2>About this event</h2>
+            <p>{{ event.summary }}</p>
+          </template>
+          <h2 v-if="event.agenda?.length">Event Agenda</h2>
+          <ul v-if="event.agenda?.length" class="agenda-list">
             <li v-for="item in event.agenda" :key="item.time">
               <strong>{{ item.time }}</strong> {{ item.label }}
             </li>
@@ -36,10 +41,18 @@ const event = computed(() => getEventById(route.params.id))
       <div class="sidebar sticky-pane">
         <AppCard class="ticket-card">
           <h3>Attendee Registration</h3>
-          <p class="price">{{ event.price }}</p>
-          <p class="ticket-desc">Secure your seat now before the quota is full.</p>
-          <AppButton variant="primary" class="register-button">Register Now</AppButton>
-          <p class="spots">Only {{ event.seatsLeft }} seats left!</p>
+          <p class="price">{{ event.price || 'Free' }}</p>
+          <p v-if="event.done" class="ticket-desc closed-message">
+            Registration for this event has closed.
+          </p>
+          <template v-else>
+            <p class="ticket-desc">Secure your seat now before the quota is full.</p>
+            <AppButton variant="primary" class="register-button">Register Now</AppButton>
+            <p v-if="event.seatsLeft" class="spots">Only {{ event.seatsLeft }} seats left!</p>
+          </template>
+          <AppButton v-if="event.done" variant="secondary" class="register-button" disabled>
+            Registration Closed
+          </AppButton>
         </AppCard>
       </div>
     </div>
@@ -48,6 +61,7 @@ const event = computed(() => getEventById(route.params.id))
   <AppCard v-else class="empty-state">
     <h3>Event not found</h3>
     <p>The selected event could not be located. Please return to the event list and choose another option.</p>
+    <AppButton as="router-link" to="/browse/events" variant="primary">Back to event catalog</AppButton>
   </AppCard>
 </template>
 
@@ -151,6 +165,11 @@ const event = computed(() => getEventById(route.params.id))
   margin-bottom: var(--space-6);
 }
 
+.closed-message {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 .register-button {
   width: 100%;
 }
@@ -174,6 +193,13 @@ const event = computed(() => getEventById(route.params.id))
 .empty-state p {
   color: var(--text-muted);
   margin: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
 }
 
 @media (max-width: 900px) {

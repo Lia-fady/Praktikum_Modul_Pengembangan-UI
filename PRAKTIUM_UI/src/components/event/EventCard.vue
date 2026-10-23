@@ -1,6 +1,7 @@
 <script setup>
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
+import { formatEventDate } from '@/utils/formatEventDate'
 
 defineProps({
   event: {
@@ -16,7 +17,7 @@ const emit = defineEmits(['view-detail'])
   <AppCard class="event-card">
     <div class="event-body">
       <div class="event-meta">
-        <span class="event-date">{{ event.date }}</span>
+        <span class="event-date">{{ formatEventDate(event.date) }}</span>
         <span class="event-category">{{ event.cat }}</span>
       </div>
       <h3 class="event-title">{{ event.title }}</h3>

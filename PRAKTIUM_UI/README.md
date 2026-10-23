@@ -1,38 +1,35 @@
-# PRAKTIUM_UI
+# Gatherly
 
-This template should help get you started developing with Vue 3 in Vite.
+Gatherly is a Vue 3 event discovery and management app. Event data is shared
+between the public catalog, event details, organizer dashboard, and event
+management page, and is persisted in the browser's LocalStorage.
 
-## Recommended IDE Setup
+## Run the project
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+From this directory, install dependencies and start the Vite development server:
 
 ```sh
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
+Open the URL printed by Vite. Organizer tools are available at `/dashboard`
+and `/dashboard/events`.
+
+To build the production bundle:
 
 ```sh
 npm run build
 ```
+
+## Try the event lifecycle
+
+1. Visit `/browse/events` to see the friendly empty state.
+2. Open `/dashboard/events`, select **Create Event**, and publish an event.
+3. Check the public catalog and `/dashboard` for the new event and updated metrics.
+4. Complete or delete an event from **Active Events** and confirm the action in
+   the modal.
+5. Reload the page to verify that remaining events persist in LocalStorage.
+
+Event data is stored under the `gatherly-events` LocalStorage key. Remove that
+key in the browser's developer tools to restore the initial empty state.
