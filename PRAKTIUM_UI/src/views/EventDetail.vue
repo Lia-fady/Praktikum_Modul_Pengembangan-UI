@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -8,8 +8,22 @@ import { useEvents } from '@/composables/useEvents'
 import { formatEventDate } from '@/utils/formatEventDate'
 
 const route = useRoute()
-const { getEventById } = useEvents()
+const router = useRouter()
+const {
+  getEventById,
+  getRegistrationForEvent,
+  isUserRegistered,
+} = useEvents()
 const event = computed(() => getEventById(route.params.id))
+const isRegistered = computed(() => isUserRegistered(route.params.id))
+const registration = computed(() => getRegistrationForEvent(route.params.id))
+const isSoldOut = computed(
+  () => event.value && Number.isFinite(event.value.seatsLeft) && event.value.seatsLeft <= 0,
+)
+
+function openRegistration() {
+  router.push({ name: 'event-registration', params: { id: route.params.id } })
+}
 </script>
 
 <template>
@@ -23,6 +37,9 @@ const event = computed(() => getEventById(route.params.id))
           </div>
           <h2>{{ event.title }}</h2>
           <p class="location">{{ event.loc }}</p>
+          <p v-if="Number.isFinite(event.seatsLeft)" class="seat-count">
+            {{ event.seatsLeft }} seats remaining
+          </p>
           <p>{{ event.desc }}</p>
 
           <template v-if="event.summary && event.summary !== event.desc">
@@ -45,12 +62,46 @@ const event = computed(() => getEventById(route.params.id))
           <p v-if="event.done" class="ticket-desc closed-message">
             Registration for this event has closed.
           </p>
+          <template v-else-if="isRegistered">
+            <p class="ticket-desc">Your seat for this event is registered.</p>
+            <AppButton
+              variant="secondary"
+              class="register-button"
+              disabled
+            >
+              Already Registered
+            </AppButton>
+            <AppButton
+              v-if="registration"
+              as="router-link"
+              :to="{ name: 'ticket-receipt', params: { id: registration.id } }"
+              variant="primary"
+              class="ticket-link"
+            >
+              View Ticket Receipt
+            </AppButton>
+          </template>
+          <template v-else-if="isSoldOut">
+            <p class="ticket-desc closed-message">All available seats have been reserved.</p>
+            <AppButton variant="secondary" class="register-button" disabled>
+              Sold Out
+            </AppButton>
+          </template>
           <template v-else>
             <p class="ticket-desc">Secure your seat now before the quota is full.</p>
-            <AppButton variant="primary" class="register-button">Register Now</AppButton>
-            <p v-if="event.seatsLeft" class="spots">Only {{ event.seatsLeft }} seats left!</p>
+            <AppButton variant="primary" class="register-button" @click="openRegistration">
+              Register Now
+            </AppButton>
+            <p v-if="Number.isFinite(event.seatsLeft)" class="spots">
+              Only {{ event.seatsLeft }} seats left!
+            </p>
           </template>
-          <AppButton v-if="event.done" variant="secondary" class="register-button" disabled>
+          <AppButton
+            v-if="event.done"
+            variant="secondary"
+            class="register-button"
+            disabled
+          >
             Registration Closed
           </AppButton>
         </AppCard>
@@ -163,6 +214,18 @@ const event = computed(() => getEventById(route.params.id))
 .ticket-desc {
   color: var(--text-muted);
   margin-bottom: var(--space-6);
+}
+
+.ticket-link {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.seat-count {
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .closed-message {

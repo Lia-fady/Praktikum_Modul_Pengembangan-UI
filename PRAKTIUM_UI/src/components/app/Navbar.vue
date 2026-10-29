@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const isScrolled = ref(false)
+const isMobileMenuOpen = ref(false)
 const route = useRoute()
 
 const menus = [
@@ -21,6 +22,7 @@ const menus = [
     ]
   },
   { name: 'Contact', path: '/contact' },
+  { name: 'Your Events', path: '/your-events' },
   { name: 'Organizer Dashboard', path: '/dashboard' }
 ]
 
@@ -61,7 +63,7 @@ onUnmounted(() => {
         <span class="logo-text">Gatherly</span>
       </router-link>
 
-      <ul class="nav-menu">
+      <ul class="nav-menu" :class="{ 'mobile-open': isMobileMenuOpen }">
         <li class="nav-item" v-for="menu in menus" :key="menu.name">
           <router-link
             :to="menu.path"
@@ -69,8 +71,10 @@ onUnmounted(() => {
             :class="{
               active:
                 route.path === menu.path ||
-                (menu.path !== '/' && route.path.startsWith(menu.path))
+                (menu.path !== '/' && route.path.startsWith(menu.path)) ||
+                (menu.path === '/your-events' && route.path.startsWith('/tickets'))
             }"
+            @click="isMobileMenuOpen = false"
           >
             {{ menu.name }}
             <svg
@@ -92,7 +96,7 @@ onUnmounted(() => {
           <!-- First Level Dropdown -->
           <ul v-if="menu.children" class="dropdown-menu">
             <li v-for="child in menu.children" :key="child.name" class="dropdown-item">
-              <router-link :to="child.path" class="dropdown-link">
+              <router-link :to="child.path" class="dropdown-link" @click="isMobileMenuOpen = false">
                 {{ child.name }}
                 <svg
                   v-if="child.children"
@@ -113,7 +117,7 @@ onUnmounted(() => {
               <!-- Second Level Dropdown (Submenu) -->
               <ul v-if="child.children" class="submenu">
                 <li v-for="subchild in child.children" :key="subchild.name" class="submenu-item">
-                  <router-link :to="subchild.path" class="dropdown-link">
+                  <router-link :to="subchild.path" class="dropdown-link" @click="isMobileMenuOpen = false">
                     {{ subchild.name }}
                   </router-link>
                 </li>
@@ -157,7 +161,13 @@ onUnmounted(() => {
           </svg>
         </div>
 
-        <button class="hamburger-btn">
+        <button
+          class="hamburger-btn"
+          type="button"
+          :aria-expanded="isMobileMenuOpen"
+          aria-label="Toggle navigation menu"
+          @click="isMobileMenuOpen = !isMobileMenuOpen"
+        >
           <svg
             width="24"
             height="24"
@@ -454,6 +464,52 @@ Inspired by user reference image
   .nav-menu {
     display: none;
   }
+
+  .nav-menu.mobile-open {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    padding: var(--space-2) var(--space-4);
+    background: #1c1948;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .nav-item {
+    display: block;
+    padding: 0;
+  }
+
+  .nav-link {
+    justify-content: space-between;
+    padding: var(--space-3);
+    font-size: 0.9rem;
+  }
+
+  .dropdown-menu,
+  .submenu {
+    position: static;
+    display: block;
+    min-width: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .dropdown-link {
+    color: white;
+  }
+
+  .dropdown-link:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
   .lang-selector {
     display: none;
   }

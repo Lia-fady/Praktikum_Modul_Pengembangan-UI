@@ -12,7 +12,7 @@ import { useEvents } from '@/composables/useEvents'
 const router = useRouter()
 const searchQuery = ref('')
 const selectedCategory = ref('All')
-const { activeEvents } = useEvents()
+const { activeEvents, isUserRegistered } = useEvents()
 
 const defaultCategories = ['Workshop', 'Meetup', 'Competition', 'Seminar', 'Conference']
 const eventCategories = computed(() => [
@@ -89,7 +89,13 @@ function resetFilters() {
     </div>
 
     <div v-if="filteredEvents.length" class="event-grid">
-      <EventCard v-for="event in filteredEvents" :key="event.id" :event="event" @view-detail="openEventDetail" />
+      <EventCard
+        v-for="event in filteredEvents"
+        :key="event.id"
+        :event="event"
+        :is-registered="isUserRegistered(event.id)"
+        @view-detail="openEventDetail"
+      />
     </div>
 
     <AppCard v-else class="empty-state">

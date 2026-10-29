@@ -20,6 +20,10 @@ defineProps({
     type: String,
     default: 'Cancel',
   },
+  showCancel: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits(['confirm', 'close'])
@@ -55,15 +59,25 @@ function onLeave(element, done) {
         tabindex="-1"
       >
         <h2>{{ title }}</h2>
-        <p>{{ message }}</p>
-        <div class="modal-actions">
-          <button type="button" class="cancel-button" @click="emit('close')">
-            {{ cancelText }}
-          </button>
-          <button type="button" class="confirm-button" @click="emit('confirm')">
-            {{ confirmText }}
-          </button>
+        <div v-if="$slots.default" class="modal-content">
+          <slot />
         </div>
+        <p v-else-if="message">{{ message }}</p>
+        <slot name="footer">
+          <div class="modal-actions">
+            <button
+              v-if="showCancel"
+              type="button"
+              class="cancel-button"
+              @click="emit('close')"
+            >
+              {{ cancelText }}
+            </button>
+            <button type="button" class="confirm-button" @click="emit('confirm')">
+              {{ confirmText }}
+            </button>
+          </div>
+        </slot>
       </section>
     </div>
   </Transition>
@@ -115,6 +129,11 @@ function onLeave(element, done) {
 
 .modal-dialog p {
   margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.modal-content {
   color: var(--text-muted);
   line-height: 1.6;
 }

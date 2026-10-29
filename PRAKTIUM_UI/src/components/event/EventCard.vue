@@ -8,6 +8,10 @@ defineProps({
     type: Object,
     required: true,
   },
+  isRegistered: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['view-detail'])
@@ -17,7 +21,10 @@ const emit = defineEmits(['view-detail'])
   <AppCard class="event-card">
     <div class="event-body">
       <div class="event-meta">
-        <span class="event-date">{{ formatEventDate(event.date) }}</span>
+        <div class="meta-left">
+          <span class="event-date">{{ formatEventDate(event.date) }}</span>
+          <span v-if="isRegistered" class="registered-badge">Registered</span>
+        </div>
         <span class="event-category">{{ event.cat }}</span>
       </div>
       <h3 class="event-title">{{ event.title }}</h3>
@@ -58,6 +65,22 @@ const emit = defineEmits(['view-detail'])
   justify-content: space-between;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
+}
+
+.meta-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.registered-badge {
+  border-radius: 999px;
+  padding: var(--space-1) var(--space-2);
+  background: #e8f4ff;
+  color: #1769aa;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .event-date {

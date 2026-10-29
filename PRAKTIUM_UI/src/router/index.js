@@ -38,6 +38,12 @@ const routes = [
             meta: { breadcrumb: 'Event Detail' }
           },
           {
+            path: 'events/:id/register',
+            name: 'event-registration',
+            component: () => import('@/views/EventRegistration.vue'),
+            meta: { breadcrumb: 'Registration' }
+          },
+          {
             path: 'category',
             name: 'category',
             component: () => import('@/views/Category.vue'),
@@ -50,6 +56,18 @@ const routes = [
         name: 'contact',
         component: () => import('@/views/Contact.vue'),
         meta: { breadcrumb: 'Contact' }
+      },
+      {
+        path: 'your-events',
+        name: 'your-events',
+        component: () => import('@/views/YourEvents.vue'),
+        meta: { breadcrumb: 'Your Events' }
+      },
+      {
+        path: 'tickets/:id',
+        name: 'ticket-receipt',
+        component: () => import('@/views/TicketReceipt.vue'),
+        meta: { breadcrumb: 'Ticket Receipt' }
       }
     ]
   },
@@ -73,7 +91,10 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
+  scrollBehavior() {
+    return { top: 0 }
+  },
 })
 
 export default router

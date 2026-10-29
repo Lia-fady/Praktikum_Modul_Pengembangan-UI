@@ -17,6 +17,7 @@ const form = reactive({
   loc: '',
   date: '',
   price: '',
+  seatsLeft: '',
 })
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -47,6 +48,7 @@ function resetForm() {
     loc: '',
     date: '',
     price: '',
+    seatsLeft: '',
   })
 }
 
@@ -59,6 +61,12 @@ function submitEvent() {
     return
   }
 
+  const seatsLeft = String(form.seatsLeft).trim() ? Number(form.seatsLeft) : null
+  if (seatsLeft !== null && (!Number.isInteger(seatsLeft) || seatsLeft < 1)) {
+    errorMessage.value = 'Available seats must be a positive whole number, or left blank for unlimited.'
+    return
+  }
+
   createEvent({
     title: form.title.trim(),
     desc: form.desc.trim(),
@@ -66,7 +74,7 @@ function submitEvent() {
     loc: form.loc.trim(),
     date: new Date(form.date).toISOString(),
     price: form.price.trim() || 'Free',
-    seatsLeft: null,
+    seatsLeft,
     summary: form.desc.trim(),
   })
 
@@ -228,6 +236,16 @@ function confirmAction() {
         <label class="form-field">
           Ticket price
           <input v-model="form.price" type="text" placeholder="Free or IDR 100.000" />
+        </label>
+        <label class="form-field">
+          Available seats
+          <input
+            v-model="form.seatsLeft"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Leave blank for unlimited"
+          />
         </label>
         <label class="form-field full-width">
           Description <span aria-hidden="true">*</span>
