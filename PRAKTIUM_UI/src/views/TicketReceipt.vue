@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 import AppButton from '@/components/ui/AppButton.vue'
@@ -8,15 +8,34 @@ import { useEvents } from '@/composables/useEvents'
 import { formatEventDate } from '@/utils/formatEventDate'
 
 const route = useRoute()
-const { getRegistrationById, getEventById, isEventDone } = useEvents()
+const { getRegistrationById, getEventById, fetchEventById, isEventDone } = useEvents()
 const registration = computed(() => getRegistrationById(route.params.id))
-const event = computed(() =>
-  registration.value ? getEventById(registration.value.eventId) : null,
-)
+const event = computed(() => (registration.value ? getEventById(registration.value.eventId) : null))
+const receiptLoading = ref(false)
+const receiptError = ref('')
+
+onMounted(async () => {
+  if (!registration.value || event.value) return
+
+  receiptLoading.value = true
+  try {
+    await fetchEventById(registration.value.eventId)
+  } catch (cause) {
+    receiptError.value = cause instanceof Error ? cause.message : 'Unable to load event details.'
+  } finally {
+    receiptLoading.value = false
+  }
+})
 </script>
 
 <template>
   <section class="receipt-page">
+    <AppCard
+      v-if="receiptLoading"
+      class="loading-skeleton receipt-loading"
+      aria-label="Loading event"
+    ></AppCard>
+    <p v-if="receiptError" class="event-unavailable" role="alert">{{ receiptError }}</p>
     <AppCard v-if="registration" class="receipt-card">
       <header class="receipt-header">
         <div>
@@ -31,7 +50,11 @@ const event = computed(() =>
         <strong>{{ registration.reference }}</strong>
       </div>
 
-      <div v-if="!event" class="event-unavailable" role="status">
+      <div
+        v-if="!event && !receiptLoading && !receiptError"
+        class="event-unavailable"
+        role="status"
+      >
         The event details are no longer available. Keep this receipt as proof of your registration.
       </div>
 
@@ -98,9 +121,7 @@ const event = computed(() =>
       <AppButton as="router-link" to="/your-events" variant="secondary">
         Back to Your Events
       </AppButton>
-      <AppButton as="router-link" to="/browse/events" variant="primary">
-        Browse events
-      </AppButton>
+      <AppButton as="router-link" to="/browse/events" variant="primary"> Browse events </AppButton>
     </div>
   </section>
 </template>
@@ -114,6 +135,10 @@ const event = computed(() =>
 .receipt-card,
 .missing-ticket {
   padding: clamp(var(--space-5), 5vw, var(--space-8));
+}
+
+.receipt-loading {
+  min-height: 320px;
 }
 
 .receipt-header {

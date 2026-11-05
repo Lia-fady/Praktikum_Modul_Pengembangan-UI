@@ -18,6 +18,10 @@ const props = defineProps({
     type: [String, Object],
     default: null,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const classes = computed(() => ['app-button', `variant-${props.variant}`])
@@ -30,7 +34,10 @@ const classes = computed(() => ['app-button', `variant-${props.variant}`])
     :to="to"
     :type="as === 'button' ? type : undefined"
     :class="classes"
+    :disabled="as === 'button' && (loading || $attrs.disabled)"
+    :aria-busy="loading ? 'true' : undefined"
   >
+    <span v-if="loading" class="btn-spinner" aria-hidden="true"></span>
     <slot />
   </component>
 </template>
@@ -48,12 +55,37 @@ const classes = computed(() => ['app-button', `variant-${props.variant}`])
   font-size: 1rem;
   font-weight: 600;
   text-decoration: none;
-  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
   cursor: pointer;
 }
 
 .app-button:hover {
   transform: translateY(-1px);
+}
+
+.app-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+  transform: none;
+}
+
+.btn-spinner {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: button-spin 0.7s linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .variant-primary {

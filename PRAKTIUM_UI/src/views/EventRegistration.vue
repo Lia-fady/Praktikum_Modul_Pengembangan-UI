@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import RegistrationForm from '@/components/event/RegistrationForm.vue'
@@ -12,7 +12,7 @@ import { useEvents } from '@/composables/useEvents'
 
 const route = useRoute()
 const router = useRouter()
-const { getEventById, getRegistrationForEvent, registerAttendee } = useEvents()
+const { getEventById, fetchEventById, getRegistrationForEvent, registerAttendee } = useEvents()
 const event = computed(() => getEventById(route.params.id))
 const registration = computed(() => getRegistrationForEvent(route.params.id))
 const isSoldOut = computed(
@@ -25,15 +25,30 @@ const submissionError = ref('')
 const isSubmitting = ref(false)
 const completedRegistration = ref(null)
 const showSuccessModal = ref(false)
+const eventLoading = ref(false)
+const eventLoadError = ref('')
 
-function submitRegistration(attendee) {
+onMounted(async () => {
+  if (event.value) return
+
+  eventLoading.value = true
+  try {
+    await fetchEventById(route.params.id)
+  } catch (cause) {
+    eventLoadError.value = cause instanceof Error ? cause.message : 'Unable to load this event.'
+  } finally {
+    eventLoading.value = false
+  }
+})
+
+async function submitRegistration(attendee) {
   if (isSubmitting.value || !canRegister.value) return
 
   isSubmitting.value = true
   submissionError.value = ''
 
   try {
-    const result = registerAttendee(route.params.id, attendee)
+    const result = await registerAttendee(route.params.id, attendee)
     if (!result.success) {
       submissionError.value = result.message
       return
@@ -41,6 +56,9 @@ function submitRegistration(attendee) {
 
     completedRegistration.value = result.registration
     showSuccessModal.value = true
+  } catch (cause) {
+    submissionError.value =
+      cause instanceof Error ? cause.message : 'Unable to complete registration.'
   } finally {
     isSubmitting.value = false
   }
@@ -59,7 +77,19 @@ function cancelRegistration() {
       <p>Review the event details and enter your attendee information.</p>
     </header>
 
-    <div v-if="event && canRegister" class="registration-layout">
+    <AppCard
+      v-if="eventLoading"
+      class="state-card loading-skeleton"
+      aria-label="Loading event"
+    ></AppCard>
+    <AppCard v-else-if="eventLoadError" class="state-card network-error-card" role="alert">
+      <h2>Unable to load event</h2>
+      <p>{{ eventLoadError }}</p>
+      <AppButton as="router-link" to="/browse/events" variant="primary"
+        >Back to event catalog</AppButton
+      >
+    </AppCard>
+    <div v-else-if="event && canRegister" class="registration-layout">
       <RegistrationSummary :event="event" />
       <RegistrationForm
         :submitting="isSubmitting"
@@ -143,6 +173,10 @@ function cancelRegistration() {
 </template>
 
 <style scoped>
+.registration-page :deep(.loading-skeleton) {
+  min-height: 260px;
+}
+
 .registration-page {
   max-width: 1180px;
   margin: 0 auto;

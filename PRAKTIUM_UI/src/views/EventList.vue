@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import CategoryFilter from '@/components/event/CategoryFilter.vue'
@@ -12,7 +12,17 @@ import { useEvents } from '@/composables/useEvents'
 const router = useRouter()
 const searchQuery = ref('')
 const selectedCategory = ref('All')
-const { activeEvents, isUserRegistered } = useEvents()
+const { activeEvents, isUserRegistered, fetchEvents, loading, error } = useEvents()
+
+async function loadEvents() {
+  try {
+    await fetchEvents()
+  } catch {
+    // The composable exposes the request error for the error state below.
+  }
+}
+
+onMounted(loadEvents)
 
 const defaultCategories = ['Workshop', 'Meetup', 'Competition', 'Seminar', 'Conference']
 const eventCategories = computed(() => [
@@ -88,7 +98,34 @@ function resetFilters() {
       <CategoryFilter v-model="selectedCategory" :categories="eventCategories" />
     </div>
 
-    <div v-if="filteredEvents.length" class="event-grid">
+    <div
+      v-if="loading"
+      class="event-grid loading-grid"
+      aria-label="Loading events"
+      aria-busy="true"
+    >
+      <div v-for="item in 3" :key="item" class="loading-skeleton"></div>
+    </div>
+
+    <AppCard v-else-if="error" class="network-error-card">
+      <h2>NETWORK ERROR</h2>
+      <p>{{ error }}</p>
+      <AppButton variant="primary" :loading="loading" @click="loadEvents"> Try again </AppButton>
+    </AppCard>
+
+    <AppCard v-else-if="activeEvents.length === 0" class="empty-state">
+      <div class="empty-illustration" aria-hidden="true">🗓️</div>
+      <h3>No Events Available Yet</h3>
+      <p>
+        There are currently no active events scheduled. Are you an organizer? Publish and manage
+        your first event through the Dashboard.
+      </p>
+      <AppButton as="router-link" to="/dashboard" variant="primary">
+        Go to Organizer Dashboard →
+      </AppButton>
+    </AppCard>
+
+    <div v-else-if="filteredEvents.length" class="event-grid">
       <EventCard
         v-for="event in filteredEvents"
         :key="event.id"
@@ -103,7 +140,11 @@ function resetFilters() {
       <h3>{{ emptyHeading }}</h3>
       <p>{{ emptyMessage }}</p>
       <div class="empty-actions">
-        <AppButton v-if="searchQuery.trim() && activeEvents.length" variant="secondary" @click="resetFilters">
+        <AppButton
+          v-if="searchQuery.trim() && activeEvents.length"
+          variant="secondary"
+          @click="resetFilters"
+        >
           Reset filters
         </AppButton>
         <AppButton as="router-link" to="/dashboard" variant="primary">
@@ -147,6 +188,10 @@ function resetFilters() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: var(--space-6);
+}
+
+.loading-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 
 .empty-state {

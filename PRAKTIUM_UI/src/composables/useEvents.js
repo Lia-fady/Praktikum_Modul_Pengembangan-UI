@@ -1,86 +1,232 @@
 import { computed, ref, watch } from 'vue'
 
-const STORAGE_KEY = 'gatherly-events'
 const REGISTRATIONS_STORAGE_KEY = 'gatherly-registrations'
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '')
 
-function loadStoredArray(key, label) {
+class ApiError extends Error {
+  constructor(message, status) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+function loadRegistrations() {
   try {
-    const storedValue = window.localStorage.getItem(key)
-
+    const storedValue = window.localStorage.getItem(REGISTRATIONS_STORAGE_KEY)
     if (!storedValue) {
       return []
     }
 
-    const parsedEvents = JSON.parse(storedValue)
-    if (!Array.isArray(parsedEvents)) {
-      throw new TypeError(`Stored Gatherly ${label} must be an array.`)
+    const parsedRegistrations = JSON.parse(storedValue)
+    if (!Array.isArray(parsedRegistrations)) {
+      throw new TypeError('Stored Gatherly registrations must be an array.')
     }
 
-    return parsedEvents
+    return parsedRegistrations
   } catch (error) {
-    console.error(`Unable to load Gatherly ${label} from LocalStorage.`, error)
+    console.error('Unable to load Gatherly registrations from LocalStorage.', error)
     return []
   }
 }
 
-const events = ref(loadStoredArray(STORAGE_KEY, 'events'))
-const userRegistrations = ref(loadStoredArray(REGISTRATIONS_STORAGE_KEY, 'registrations'))
+const events = ref([])
+const userRegistrations = ref(loadRegistrations())
+const loading = ref(false)
+const error = ref('')
+let activeRequests = 0
+
 const totalEvents = computed(() => events.value.length)
 const activeEvents = computed(() => events.value.filter((event) => !event.done))
 const completedEvents = computed(() => events.value.filter((event) => event.done))
 
-function persistToLocalStorage(key, value, label) {
+function persistRegistrations(registrations) {
   try {
-    window.localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    console.error(`Unable to save Gatherly ${label} to LocalStorage.`, error)
+    window.localStorage.setItem(REGISTRATIONS_STORAGE_KEY, JSON.stringify(registrations))
+  } catch (storageError) {
+    console.error('Unable to save Gatherly registrations to LocalStorage.', storageError)
   }
 }
 
-watch(events, (updatedEvents) => persistToLocalStorage(STORAGE_KEY, updatedEvents, 'events'), {
-  deep: true,
-})
-watch(
-  userRegistrations,
-  (updatedRegistrations) =>
-    persistToLocalStorage(REGISTRATIONS_STORAGE_KEY, updatedRegistrations, 'registrations'),
-  { deep: true },
-)
+watch(userRegistrations, persistRegistrations, { deep: true })
 
-function createEvent(eventData) {
-  const existingNumericIds = events.value
-    .map((event) => Number(event.id))
-    .filter(Number.isSafeInteger)
-  const nextId = Math.max(Date.now(), ...existingNumericIds.map((id) => id + 1))
+function normalizeEvent(event) {
+  const quota = event.quota === null || event.quota === '' ? null : Number(event.quota)
 
-  const newEvent = {
-    ...eventData,
-    id: nextId,
-    done: false,
-    createdAt: new Date().toISOString(),
+  return {
+    ...event,
+    id: String(event.id),
+    seatsLeft: Number.isFinite(quota) ? quota : null,
+    price: event.price || 'Free',
+    summary: event.summary || event.desc,
+    done: Boolean(event.done),
   }
-
-  events.value.unshift(newEvent)
-  return newEvent
 }
 
-function completeEvent(id) {
+function toApiEvent(event) {
+  return {
+    title: event.title,
+    cat: event.cat,
+    date: event.date,
+    loc: event.loc,
+    quota: Number.isFinite(event.seatsLeft) ? event.seatsLeft : null,
+    desc: event.desc,
+    done: Boolean(event.done),
+    price: event.price || 'Free',
+  }
+}
+
+function getErrorMessage(cause) {
+  if (cause instanceof ApiError && cause.status === 404) {
+    return 'Event not found (404). It may have been removed.'
+  }
+  if (cause instanceof TypeError && cause.message === 'Failed to fetch') {
+    return 'Unable to connect to the event server. Check your internet connection and try again.'
+  }
+  return cause instanceof Error ? cause.message : 'An unexpected error occurred.'
+}
+
+async function request(path = '', options = {}) {
+  activeRequests += 1
+  loading.value = true
+  error.value = ''
+
+  try {
+    if (!API_URL) {
+      throw new Error(
+        'VITE_API_URL is not configured. Add it to the project .env file and restart Vite.',
+      )
+    }
+
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...options.headers,
+      },
+    })
+
+    const responseText = response.status === 204 ? '' : await response.text()
+    let responseData = null
+
+    if (responseText) {
+      try {
+        responseData = JSON.parse(responseText)
+      } catch {
+        throw new Error('The event server returned an invalid JSON response.')
+      }
+    }
+
+    if (!response.ok) {
+      throw new ApiError(
+        responseData?.message || `The event server returned HTTP ${response.status}.`,
+        response.status,
+      )
+    }
+
+    return responseData
+  } catch (cause) {
+    error.value = getErrorMessage(cause)
+    throw cause
+  } finally {
+    activeRequests -= 1
+    loading.value = activeRequests > 0
+  }
+}
+
+function replaceEvent(updatedEvent) {
+  const eventIndex = events.value.findIndex((event) => String(event.id) === updatedEvent.id)
+  if (eventIndex === -1) {
+    events.value.unshift(updatedEvent)
+  } else {
+    events.value.splice(eventIndex, 1, updatedEvent)
+  }
+}
+
+function getEventById(id) {
+  return events.value.find((event) => String(event.id) === String(id)) ?? null
+}
+
+async function fetchEvents() {
+  const responseData = await request()
+  if (!Array.isArray(responseData)) {
+    const cause = new TypeError('The event server response must be a JSON array.')
+    error.value = cause.message
+    throw cause
+  }
+
+  events.value = responseData.map(normalizeEvent)
+  return events.value
+}
+
+async function fetchEventById(id) {
+  const existingEvent = getEventById(id)
+  if (existingEvent) {
+    return existingEvent
+  }
+
+  const responseData = await request(`/${encodeURIComponent(id)}`)
+  if (!responseData || typeof responseData !== 'object' || Array.isArray(responseData)) {
+    const cause = new TypeError('The event server returned an invalid event.')
+    error.value = cause.message
+    throw cause
+  }
+
+  const event = normalizeEvent(responseData)
+  replaceEvent(event)
+  return event
+}
+
+async function createEvent(eventData) {
+  const responseData = await request('', {
+    method: 'POST',
+    body: JSON.stringify(toApiEvent({ ...eventData, done: false })),
+  })
+  if (!responseData || typeof responseData !== 'object' || Array.isArray(responseData)) {
+    const cause = new TypeError('The event server returned an invalid event after creation.')
+    error.value = cause.message
+    throw cause
+  }
+
+  const event = normalizeEvent({
+    ...responseData,
+    createdAt: responseData.createdAt || new Date().toISOString(),
+  })
+  events.value.unshift(event)
+  return event
+}
+
+async function updateEvent(id, changes) {
+  const currentEvent = getEventById(id)
+  if (!currentEvent) {
+    return false
+  }
+
+  const updatedEvent = { ...currentEvent, ...changes }
+  const responseData = await request(`/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(toApiEvent(updatedEvent)),
+  })
+  replaceEvent(normalizeEvent(responseData || updatedEvent))
+  return true
+}
+
+async function completeEvent(id) {
   const event = getEventById(id)
   if (!event || event.done) {
     return false
   }
 
-  event.done = true
-  event.completedAt = new Date().toISOString()
-  return true
+  return updateEvent(id, { done: true, completedAt: new Date().toISOString() })
 }
 
-function deleteEvent(id) {
+async function deleteEvent(id) {
   const eventIndex = events.value.findIndex((event) => String(event.id) === String(id))
   if (eventIndex === -1) {
     return false
   }
 
+  await request(`/${encodeURIComponent(id)}`, { method: 'DELETE' })
   events.value.splice(eventIndex, 1)
   userRegistrations.value = userRegistrations.value.filter(
     (registration) => String(registration.eventId) !== String(id),
@@ -88,12 +234,10 @@ function deleteEvent(id) {
   return true
 }
 
-function getEventById(id) {
-  return events.value.find((event) => String(event.id) === String(id)) ?? null
-}
-
 function getRegistrationById(id) {
-  return userRegistrations.value.find((registration) => String(registration.id) === String(id)) ?? null
+  return (
+    userRegistrations.value.find((registration) => String(registration.id) === String(id)) ?? null
+  )
 }
 
 function getRegistrationForEvent(eventId) {
@@ -110,9 +254,7 @@ function isUserRegistered(eventId) {
 
 function isEventDone(eventOrId) {
   const event =
-    typeof eventOrId === 'object' && eventOrId !== null
-      ? eventOrId
-      : getEventById(eventOrId)
+    typeof eventOrId === 'object' && eventOrId !== null ? eventOrId : getEventById(eventOrId)
 
   return Boolean(event?.done)
 }
@@ -145,7 +287,7 @@ function createRegistrationId() {
   return id
 }
 
-function registerAttendee(eventId, attendeeData) {
+async function registerAttendee(eventId, attendeeData) {
   const event = getEventById(eventId)
   if (!event) {
     return { success: false, message: 'This event could not be found.' }
@@ -160,6 +302,10 @@ function registerAttendee(eventId, attendeeData) {
     return { success: false, message: 'This event is sold out.' }
   }
 
+  if (Number.isFinite(event.seatsLeft)) {
+    await updateEvent(eventId, { seatsLeft: event.seatsLeft - 1 })
+  }
+
   const registration = {
     ...attendeeData,
     id: createRegistrationId(),
@@ -167,16 +313,12 @@ function registerAttendee(eventId, attendeeData) {
     reference: createReference(),
     registeredAt: new Date().toISOString(),
   }
-
-  if (Number.isFinite(event.seatsLeft)) {
-    event.seatsLeft -= 1
-  }
   userRegistrations.value.push(registration)
 
   return { success: true, registration }
 }
 
-function cancelRegistration(id) {
+async function cancelRegistration(id) {
   const registrationIndex = userRegistrations.value.findIndex(
     (registration) => String(registration.id) === String(id),
   )
@@ -190,10 +332,11 @@ function cancelRegistration(id) {
     return false
   }
 
-  userRegistrations.value.splice(registrationIndex, 1)
   if (event && Number.isFinite(event.seatsLeft)) {
-    event.seatsLeft += 1
+    await updateEvent(event.id, { seatsLeft: event.seatsLeft + 1 })
   }
+
+  userRegistrations.value.splice(registrationIndex, 1)
   return true
 }
 
@@ -204,6 +347,10 @@ export function useEvents() {
     totalEvents,
     activeEvents,
     completedEvents,
+    loading,
+    error,
+    fetchEvents,
+    fetchEventById,
     createEvent,
     completeEvent,
     deleteEvent,

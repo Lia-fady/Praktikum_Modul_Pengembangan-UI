@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AppButton from '@/components/ui/AppButton.vue'
@@ -9,17 +9,40 @@ import { formatEventDate } from '@/utils/formatEventDate'
 
 const route = useRoute()
 const router = useRouter()
-const {
-  getEventById,
-  getRegistrationForEvent,
-  isUserRegistered,
-} = useEvents()
+const { getEventById, fetchEventById, getRegistrationForEvent, isUserRegistered } = useEvents()
 const event = computed(() => getEventById(route.params.id))
+const detailLoading = ref(false)
+const detailError = ref('')
+const eventNotFound = ref(false)
 const isRegistered = computed(() => isUserRegistered(route.params.id))
 const registration = computed(() => getRegistrationForEvent(route.params.id))
 const isSoldOut = computed(
   () => event.value && Number.isFinite(event.value.seatsLeft) && event.value.seatsLeft <= 0,
 )
+
+async function loadEvent() {
+  detailError.value = ''
+  eventNotFound.value = false
+  if (event.value) {
+    return
+  }
+
+  detailLoading.value = true
+  try {
+    await fetchEventById(route.params.id)
+  } catch (cause) {
+    if (cause?.status === 404) {
+      eventNotFound.value = true
+    } else {
+      detailError.value = cause instanceof Error ? cause.message : 'Unable to load this event.'
+    }
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+onMounted(loadEvent)
+watch(() => route.params.id, loadEvent)
 
 function openRegistration() {
   router.push({ name: 'event-registration', params: { id: route.params.id } })
@@ -27,6 +50,18 @@ function openRegistration() {
 </script>
 
 <template>
+  <AppCard
+    v-if="detailLoading"
+    class="loading-skeleton detail-loading"
+    aria-label="Loading event"
+  ></AppCard>
+
+  <AppCard v-else-if="detailError" class="network-error-card">
+    <h2>Unable to load event</h2>
+    <p>{{ detailError }}</p>
+    <AppButton variant="primary" @click="loadEvent">Try again</AppButton>
+  </AppCard>
+
   <div v-if="event" class="event-detail-page">
     <div class="detail-content grid-asymmetric">
       <AppCard class="main-desc">
@@ -64,11 +99,7 @@ function openRegistration() {
           </p>
           <template v-else-if="isRegistered">
             <p class="ticket-desc">Your seat for this event is registered.</p>
-            <AppButton
-              variant="secondary"
-              class="register-button"
-              disabled
-            >
+            <AppButton variant="secondary" class="register-button" disabled>
               Already Registered
             </AppButton>
             <AppButton
@@ -83,9 +114,7 @@ function openRegistration() {
           </template>
           <template v-else-if="isSoldOut">
             <p class="ticket-desc closed-message">All available seats have been reserved.</p>
-            <AppButton variant="secondary" class="register-button" disabled>
-              Sold Out
-            </AppButton>
+            <AppButton variant="secondary" class="register-button" disabled> Sold Out </AppButton>
           </template>
           <template v-else>
             <p class="ticket-desc">Secure your seat now before the quota is full.</p>
@@ -96,12 +125,7 @@ function openRegistration() {
               Only {{ event.seatsLeft }} seats left!
             </p>
           </template>
-          <AppButton
-            v-if="event.done"
-            variant="secondary"
-            class="register-button"
-            disabled
-          >
+          <AppButton v-if="event.done" variant="secondary" class="register-button" disabled>
             Registration Closed
           </AppButton>
         </AppCard>
@@ -109,10 +133,18 @@ function openRegistration() {
     </div>
   </div>
 
-  <AppCard v-else class="empty-state">
+  <AppCard v-else-if="!detailLoading && !detailError" class="empty-state">
     <h3>Event not found</h3>
-    <p>The selected event could not be located. Please return to the event list and choose another option.</p>
-    <AppButton as="router-link" to="/browse/events" variant="primary">Back to event catalog</AppButton>
+    <p>
+      {{
+        eventNotFound
+          ? 'This event may have been removed from the server.'
+          : 'The selected event could not be located. Please return to the event list and choose another option.'
+      }}
+    </p>
+    <AppButton as="router-link" to="/browse/events" variant="primary"
+      >Back to event catalog</AppButton
+    >
   </AppCard>
 </template>
 
@@ -263,6 +295,10 @@ function openRegistration() {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-4);
+}
+
+.detail-loading {
+  min-height: 360px;
 }
 
 @media (max-width: 900px) {

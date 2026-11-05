@@ -35,6 +35,41 @@ body {
   overflow-x: hidden;
 }
 
+.loading-skeleton {
+  min-height: 260px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: linear-gradient(90deg, #f1f1f4 25%, #fafafa 50%, #f1f1f4 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s ease-in-out infinite;
+}
+
+.network-error-card {
+  border: 1px solid #f1c7cb;
+  border-radius: 16px;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  background: #fff7f7;
+  color: #842029;
+  text-align: center;
+}
+
+.network-error-card h2,
+.network-error-card h3 {
+  margin: 0 0 var(--space-3);
+  color: #842029;
+}
+
+.network-error-card p {
+  margin: 0 0 var(--space-4);
+  line-height: 1.6;
+}
+
+@keyframes loading-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 /* GLOBAL GRID SYSTEM
 Menerapkan 12-kolom grid untuk tata letak yang konsisten */
 .grid-12 {

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -7,7 +7,16 @@ import AppCard from '@/components/ui/AppCard.vue'
 import { useEvents } from '@/composables/useEvents'
 import { formatEventDate } from '@/utils/formatEventDate'
 
-const { activeEvents, completedEvents, createEvent, completeEvent, deleteEvent } = useEvents()
+const {
+  activeEvents,
+  completedEvents,
+  createEvent,
+  completeEvent,
+  deleteEvent,
+  fetchEvents,
+  loading,
+  error: apiError,
+} = useEvents()
 
 const currentTab = ref('active')
 const form = reactive({
@@ -28,7 +37,8 @@ const modalContent = computed(() => {
   if (modalAction.value === 'complete') {
     return {
       title: 'Complete this event?',
-      message: 'This event will move to Completed Events and will no longer appear in the public catalog.',
+      message:
+        'This event will move to Completed Events and will no longer appear in the public catalog.',
       confirmText: 'Complete Event',
     }
   }
@@ -52,8 +62,21 @@ function resetForm() {
   })
 }
 
-function submitEvent() {
+async function loadEvents() {
+  try {
+    await fetchEvents()
+  } catch {
+    // The composable exposes the request error for the retry state below.
+  }
+}
+
+onMounted(loadEvents)
+
+async function submitEvent() {
+  if (loading.value) return
+
   successMessage.value = ''
+  errorMessage.value = ''
   const requiredFields = [form.title, form.desc, form.cat, form.loc, form.date]
 
   if (requiredFields.some((field) => !field.trim())) {
@@ -63,25 +86,29 @@ function submitEvent() {
 
   const seatsLeft = String(form.seatsLeft).trim() ? Number(form.seatsLeft) : null
   if (seatsLeft !== null && (!Number.isInteger(seatsLeft) || seatsLeft < 1)) {
-    errorMessage.value = 'Available seats must be a positive whole number, or left blank for unlimited.'
+    errorMessage.value =
+      'Available seats must be a positive whole number, or left blank for unlimited.'
     return
   }
 
-  createEvent({
-    title: form.title.trim(),
-    desc: form.desc.trim(),
-    cat: form.cat.trim(),
-    loc: form.loc.trim(),
-    date: new Date(form.date).toISOString(),
-    price: form.price.trim() || 'Free',
-    seatsLeft,
-    summary: form.desc.trim(),
-  })
+  try {
+    await createEvent({
+      title: form.title.trim(),
+      desc: form.desc.trim(),
+      cat: form.cat.trim(),
+      loc: form.loc.trim(),
+      date: new Date(form.date).toISOString(),
+      price: form.price.trim() || 'Free',
+      seatsLeft,
+      summary: form.desc.trim(),
+    })
 
-  resetForm()
-  errorMessage.value = ''
-  successMessage.value = 'Your event was created successfully.'
-  currentTab.value = 'active'
+    resetForm()
+    successMessage.value = 'Your event was created successfully.'
+    currentTab.value = 'active'
+  } catch (cause) {
+    errorMessage.value = cause instanceof Error ? cause.message : 'Unable to create the event.'
+  }
 }
 
 function openConfirmation(action, eventId) {
@@ -94,14 +121,25 @@ function closeModal() {
   selectedEventId.value = null
 }
 
-function confirmAction() {
-  if (modalAction.value === 'complete') {
-    completeEvent(selectedEventId.value)
-  } else if (modalAction.value === 'delete') {
-    deleteEvent(selectedEventId.value)
-  }
+async function confirmAction() {
+  if (loading.value) return
 
-  closeModal()
+  try {
+    if (modalAction.value === 'complete') {
+      await completeEvent(selectedEventId.value)
+    } else if (modalAction.value === 'delete') {
+      await deleteEvent(selectedEventId.value)
+    }
+
+    successMessage.value =
+      modalAction.value === 'complete'
+        ? 'The event was marked as completed.'
+        : 'The event was deleted successfully.'
+    errorMessage.value = ''
+    closeModal()
+  } catch (cause) {
+    errorMessage.value = cause instanceof Error ? cause.message : 'Unable to update the event.'
+  }
 }
 </script>
 
@@ -153,40 +191,63 @@ function confirmAction() {
       {{ successMessage }}
     </p>
 
-    <div v-if="currentTab === 'active'" class="event-grid" role="tabpanel" aria-labelledby="tab-active">
-      <AppCard v-for="event in activeEvents" :key="event.id" class="management-card">
-        <div class="event-meta">
-          <span class="category-badge">{{ event.cat }}</span>
-          <span class="status-badge status-active">Active</span>
-        </div>
-        <h3>{{ event.title }}</h3>
-        <p class="event-date">{{ formatEventDate(event.date) }}</p>
-        <p class="event-location">{{ event.loc }}</p>
-        <p class="event-description">{{ event.desc }}</p>
-        <div class="card-actions">
-          <button
-            type="button"
-            class="complete-button"
-            @click="openConfirmation('complete', event.id)"
-          >
-            Complete Event
-          </button>
-          <button
-            type="button"
-            class="delete-button"
-            @click="openConfirmation('delete', event.id)"
-          >
-            Delete
-          </button>
-        </div>
-      </AppCard>
+    <p v-if="errorMessage && currentTab !== 'create'" class="feedback error" role="alert">
+      {{ errorMessage }}
+    </p>
 
-      <AppCard v-if="activeEvents.length === 0" class="empty-state">
-        <div class="empty-icon" aria-hidden="true">✦</div>
-        <h3>No active events yet</h3>
-        <p>Create your first event to publish it in the Gatherly public catalog.</p>
-        <AppButton variant="primary" @click="currentTab = 'create'">Create your first event</AppButton>
+    <div
+      v-if="currentTab === 'active'"
+      class="event-grid"
+      role="tabpanel"
+      aria-labelledby="tab-active"
+    >
+      <div
+        v-if="loading && activeEvents.length === 0"
+        class="loading-skeleton"
+        aria-label="Loading events"
+      ></div>
+      <AppCard v-else-if="apiError" class="network-error-card">
+        <h3>Unable to load events</h3>
+        <p>{{ apiError }}</p>
+        <AppButton variant="primary" :loading="loading" @click="loadEvents">Try again</AppButton>
       </AppCard>
+      <template v-else>
+        <AppCard v-for="event in activeEvents" :key="event.id" class="management-card">
+          <div class="event-meta">
+            <span class="category-badge">{{ event.cat }}</span>
+            <span class="status-badge status-active">Active</span>
+          </div>
+          <h3>{{ event.title }}</h3>
+          <p class="event-date">{{ formatEventDate(event.date) }}</p>
+          <p class="event-location">{{ event.loc }}</p>
+          <p class="event-description">{{ event.desc }}</p>
+          <div class="card-actions">
+            <button
+              type="button"
+              class="complete-button"
+              @click="openConfirmation('complete', event.id)"
+            >
+              Complete Event
+            </button>
+            <button
+              type="button"
+              class="delete-button"
+              @click="openConfirmation('delete', event.id)"
+            >
+              Delete
+            </button>
+          </div>
+        </AppCard>
+
+        <AppCard v-if="activeEvents.length === 0" class="empty-state">
+          <div class="empty-icon" aria-hidden="true">✦</div>
+          <h3>No active events yet</h3>
+          <p>Create your first event to publish it in the Gatherly public catalog.</p>
+          <AppButton variant="primary" @click="currentTab = 'create'"
+            >Create your first event</AppButton
+          >
+        </AppCard>
+      </template>
     </div>
 
     <form
@@ -259,32 +320,43 @@ function confirmAction() {
 
       <div class="form-actions">
         <AppButton variant="secondary" @click="resetForm">Clear form</AppButton>
-        <AppButton variant="primary" type="submit">Publish Event</AppButton>
+        <AppButton variant="primary" type="submit" :loading="loading">Publish Event</AppButton>
       </div>
     </form>
 
-    <div
-      v-else
-      class="event-grid"
-      role="tabpanel"
-      aria-labelledby="tab-completed"
-    >
-      <AppCard v-for="event in completedEvents" :key="event.id" class="management-card completed-card">
-        <div class="event-meta">
-          <span class="category-badge">{{ event.cat }}</span>
-          <span class="status-badge status-completed">Completed</span>
-        </div>
-        <h3>{{ event.title }}</h3>
-        <p class="event-date">{{ formatEventDate(event.date) }}</p>
-        <p class="event-location">{{ event.loc }}</p>
-        <p class="event-description">{{ event.desc }}</p>
+    <div v-else class="event-grid" role="tabpanel" aria-labelledby="tab-completed">
+      <div
+        v-if="loading && completedEvents.length === 0"
+        class="loading-skeleton"
+        aria-label="Loading events"
+      ></div>
+      <AppCard v-else-if="apiError" class="network-error-card">
+        <h3>Unable to load events</h3>
+        <p>{{ apiError }}</p>
+        <AppButton variant="primary" :loading="loading" @click="loadEvents">Try again</AppButton>
       </AppCard>
+      <template v-else>
+        <AppCard
+          v-for="event in completedEvents"
+          :key="event.id"
+          class="management-card completed-card"
+        >
+          <div class="event-meta">
+            <span class="category-badge">{{ event.cat }}</span>
+            <span class="status-badge status-completed">Completed</span>
+          </div>
+          <h3>{{ event.title }}</h3>
+          <p class="event-date">{{ formatEventDate(event.date) }}</p>
+          <p class="event-location">{{ event.loc }}</p>
+          <p class="event-description">{{ event.desc }}</p>
+        </AppCard>
 
-      <AppCard v-if="completedEvents.length === 0" class="empty-state">
-        <div class="empty-icon" aria-hidden="true">✓</div>
-        <h3>No completed events</h3>
-        <p>Events you complete will be archived here.</p>
-      </AppCard>
+        <AppCard v-if="completedEvents.length === 0" class="empty-state">
+          <div class="empty-icon" aria-hidden="true">✓</div>
+          <h3>No completed events</h3>
+          <p>Events you complete will be archived here.</p>
+        </AppCard>
+      </template>
     </div>
 
     <AppModal

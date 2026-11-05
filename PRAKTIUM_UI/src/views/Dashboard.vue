@@ -1,11 +1,17 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 
 import AppButton from '@/components/ui/AppButton.vue'
 import { useEvents } from '@/composables/useEvents'
 import { formatEventDate } from '@/utils/formatEventDate'
 
-const { events, totalEvents, activeEvents, completedEvents } = useEvents()
+const { events, totalEvents, activeEvents, completedEvents, fetchEvents, error } = useEvents()
+
+onMounted(() => {
+  fetchEvents().catch(() => {
+    // The composable exposes the request error to the dashboard.
+  })
+})
 const recentEvents = computed(() =>
   [...events.value].sort((first, second) => {
     const firstCreated = new Date(first.createdAt || first.date).getTime() || 0
@@ -17,6 +23,7 @@ const recentEvents = computed(() =>
 
 <template>
   <section class="dashboard-overview">
+    <p v-if="error" class="dashboard-error" role="alert">{{ error }}</p>
     <div class="dashboard-heading">
       <div>
         <p class="eyebrow">Organizer workspace</p>
@@ -98,6 +105,14 @@ const recentEvents = computed(() =>
 </template>
 
 <style scoped>
+.dashboard-error {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #b42332;
+}
+
 .dashboard-heading {
   display: flex;
   align-items: center;

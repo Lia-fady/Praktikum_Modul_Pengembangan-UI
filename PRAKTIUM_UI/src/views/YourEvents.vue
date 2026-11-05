@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -7,7 +7,15 @@ import AppModal from '@/components/ui/AppModal.vue'
 import { useEvents } from '@/composables/useEvents'
 import { formatEventDate } from '@/utils/formatEventDate'
 
-const { userRegistrations, getEventById, isEventDone, cancelRegistration } = useEvents()
+const {
+  userRegistrations,
+  getEventById,
+  isEventDone,
+  cancelRegistration,
+  fetchEvents,
+  loading,
+  error: apiError,
+} = useEvents()
 const ticketItems = computed(() =>
   userRegistrations.value.map((registration) => ({
     registration,
@@ -18,6 +26,12 @@ const selectedRegistrationId = ref(null)
 const cancellationError = ref('')
 const cancellationNotice = ref('')
 
+onMounted(() => {
+  fetchEvents().catch(() => {
+    // The composable exposes the request error to this page.
+  })
+})
+
 function requestCancellation(registrationId) {
   cancellationError.value = ''
   selectedRegistrationId.value = registrationId
@@ -27,16 +41,22 @@ function closeCancellation() {
   selectedRegistrationId.value = null
 }
 
-function confirmCancellation() {
-  const cancelled = cancelRegistration(selectedRegistrationId.value)
-  if (!cancelled) {
-    cancellationError.value = 'This ticket can no longer be cancelled.'
-    selectedRegistrationId.value = null
-    return
-  }
+async function confirmCancellation() {
+  try {
+    const cancelled = await cancelRegistration(selectedRegistrationId.value)
+    if (!cancelled) {
+      cancellationError.value = 'This ticket can no longer be cancelled.'
+      selectedRegistrationId.value = null
+      return
+    }
 
-  cancellationNotice.value = 'Your registration was cancelled and the event quota was updated.'
-  selectedRegistrationId.value = null
+    cancellationNotice.value = 'Your registration was cancelled and the event quota was updated.'
+    selectedRegistrationId.value = null
+  } catch (cause) {
+    cancellationError.value =
+      cause instanceof Error ? cause.message : 'Unable to cancel this ticket.'
+    selectedRegistrationId.value = null
+  }
 }
 </script>
 
@@ -48,25 +68,26 @@ function confirmCancellation() {
         <h1>Your Events</h1>
         <p>View and manage the event registrations saved in this browser.</p>
       </div>
-      <AppButton as="router-link" to="/browse/events" variant="primary">
-        Explore events
-      </AppButton>
+      <AppButton as="router-link" to="/browse/events" variant="primary"> Explore events </AppButton>
     </header>
 
     <p v-if="cancellationNotice" class="notice" role="status">{{ cancellationNotice }}</p>
     <p v-if="cancellationError" class="notice error" role="alert">{{ cancellationError }}</p>
+    <p v-if="apiError" class="notice error" role="alert">{{ apiError }}</p>
 
-    <div v-if="ticketItems.length" class="ticket-grid">
+    <div
+      v-if="loading && ticketItems.length === 0"
+      class="loading-skeleton"
+      aria-label="Loading events"
+    ></div>
+    <div v-else-if="ticketItems.length" class="ticket-grid">
       <AppCard
         v-for="{ registration, event } in ticketItems"
         :key="registration.id"
         class="ticket-card"
       >
         <div class="ticket-heading">
-          <span
-            class="status-badge"
-            :class="{ concluded: event && isEventDone(event) }"
-          >
+          <span class="status-badge" :class="{ concluded: event && isEventDone(event) }">
             {{ !event ? 'Event unavailable' : isEventDone(event) ? 'Concluded' : 'Upcoming' }}
           </span>
           <span class="reference">{{ registration.reference }}</span>
@@ -110,9 +131,7 @@ function confirmCancellation() {
       <div class="empty-icon" aria-hidden="true">🎟️</div>
       <h2>No tickets yet</h2>
       <p>When you register for an event, your digital ticket will appear here.</p>
-      <AppButton as="router-link" to="/browse/events" variant="primary">
-        Find an event
-      </AppButton>
+      <AppButton as="router-link" to="/browse/events" variant="primary"> Find an event </AppButton>
     </AppCard>
 
     <AppModal
